@@ -76,13 +76,14 @@ export default function KanbanDashboard() {
   const expandAll = () => setExpandedSessions(new Set(filtered.map(s => s.id)));
   const collapseAll = () => setExpandedSessions(new Set());
 
+  const q = searchQuery.trim().toLowerCase();
+
   // Filter & search
   const filtered = sessions.filter(s => {
     if (filter === 'active' && s.isStale) return false;
     if (filter === 'ended' && !s.isStale) return false;
     if (sourceFilter !== 'all' && s.source !== sourceFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (q) {
       const matchSess = s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
       const matchTask = s.tasks.some(t =>
         t.subject.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q)
@@ -91,6 +92,17 @@ export default function KanbanDashboard() {
     }
     return true;
   });
+
+  // Auto-expand sessions with matching tasks when searching
+  useEffect(() => {
+    if (!q) return;
+    setExpandedSessions(prev => {
+      const next = new Set(prev);
+      filtered.forEach(s => next.add(s.id));
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
   // Stats (active sessions only for the main counters)
   const active = sessions.filter(s => !s.isStale);
@@ -211,6 +223,7 @@ export default function KanbanDashboard() {
                 session={session}
                 isExpanded={expandedSessions.has(session.id)}
                 onToggle={() => toggleSession(session.id)}
+                searchQuery={q}
               />
             ))}
           </div>

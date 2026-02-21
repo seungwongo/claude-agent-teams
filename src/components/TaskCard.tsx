@@ -5,6 +5,20 @@ import { Task } from '@/app/api/teams/route';
 interface TaskCardProps {
   task: Task;
   isStale?: boolean;
+  searchQuery?: string;
+}
+
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query) return <>{text}</>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-400/30 text-amber-200 rounded-sm px-0.5">{text.slice(idx, idx + query.length)}</mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
 }
 
 const statusConfig = {
@@ -25,7 +39,7 @@ const staleInterrupted = {
   color: 'text-slate-600', bg: 'bg-slate-900/30', border: 'border-slate-800/30', dot: 'bg-slate-700',
 };
 
-export default function TaskCard({ task, isStale = false }: TaskCardProps) {
+export default function TaskCard({ task, isStale = false, searchQuery = '' }: TaskCardProps) {
   const cfg = statusConfig[task.status] ?? statusConfig.pending;
   const isActive = task.status === 'in_progress';
   const isInterrupted = isStale && (task.status === 'pending' || task.status === 'in_progress');
@@ -47,7 +61,7 @@ export default function TaskCard({ task, isStale = false }: TaskCardProps) {
       <div className="flex items-start gap-2 mb-1.5">
         <span className={`${effectiveCfg.color} text-xs mt-0.5 shrink-0 font-mono`}>#{task.id}</span>
         <p className={`text-sm font-medium leading-snug flex-1 ${isInterrupted ? 'text-slate-500' : isActive ? 'text-white' : 'text-slate-200'}`}>
-          {task.subject}
+          <Highlight text={task.subject} query={searchQuery} />
         </p>
       </div>
 
@@ -62,7 +76,7 @@ export default function TaskCard({ task, isStale = false }: TaskCardProps) {
       {/* Description */}
       {task.description && (
         <p className={`text-xs leading-relaxed line-clamp-2 mb-1.5 ${isInterrupted ? 'text-slate-600' : 'text-slate-400'}`}>
-          {task.description}
+          <Highlight text={task.description} query={searchQuery} />
         </p>
       )}
 

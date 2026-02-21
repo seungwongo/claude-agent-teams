@@ -11,6 +11,7 @@ interface KanbanColumnProps {
   color: string;
   headerBg: string;
   isStale?: boolean;
+  searchQuery?: string;
 }
 
 export default function KanbanColumn({
@@ -21,6 +22,7 @@ export default function KanbanColumn({
   color,
   headerBg,
   isStale = false,
+  searchQuery = '',
 }: KanbanColumnProps) {
   // In stale sessions, pending/in_progress are "interrupted" – highlight them
   const isOrphanedColumn = isStale && (status === 'pending' || status === 'in_progress');
@@ -55,11 +57,11 @@ export default function KanbanColumn({
       >
         {tasks.length === 0 ? (
           <div className="flex items-center justify-center h-20 text-slate-700 text-xs">
-            No tasks
+            {searchQuery ? 'No matches' : 'No tasks'}
           </div>
         ) : (
           tasks.map(task => (
-            <TaskCard key={task.id} task={task} isStale={isStale} />
+            <TaskCard key={task.id} task={task} isStale={isStale} searchQuery={searchQuery} />
           ))
         )}
       </div>

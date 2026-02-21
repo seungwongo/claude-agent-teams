@@ -7,6 +7,7 @@ interface SessionBoardProps {
   session: Session;
   isExpanded: boolean;
   onToggle: () => void;
+  searchQuery?: string;
 }
 
 const COLUMNS: { status: Task['status']; title: string; icon: string; color: string; headerBg: string }[] = [
@@ -16,22 +17,32 @@ const COLUMNS: { status: Task['status']; title: string; icon: string; color: str
   { status: 'blocked',     title: 'Blocked',     icon: '✕', color: 'text-red-300',     headerBg: 'bg-red-900/40' },
 ];
 
-export default function SessionBoard({ session, isExpanded, onToggle }: SessionBoardProps) {
+export default function SessionBoard({ session, isExpanded, onToggle, searchQuery = '' }: SessionBoardProps) {
   const { isStale, source } = session;
 
+  // When searching, only show tasks that match the query
+  const visibleTasks = searchQuery
+    ? session.tasks.filter(t =>
+        t.subject.toLowerCase().includes(searchQuery) ||
+        (t.description ?? '').toLowerCase().includes(searchQuery)
+      )
+    : session.tasks;
+
   const tasksByStatus = COLUMNS.reduce((acc, col) => {
-    acc[col.status] = session.tasks.filter(t => t.status === col.status);
+    acc[col.status] = visibleTasks.filter(t => t.status === col.status);
     return acc;
   }, {} as Record<string, Task[]>);
 
   const total = session.tasks.length;
-  const completedCount = tasksByStatus['completed']?.length ?? 0;
+  const matchCount = searchQuery ? visibleTasks.length : 0;
+  const completedCount = (searchQuery ? 0 : tasksByStatus['completed']?.length) ?? tasksByStatus['completed']?.length ?? 0;
   const inProgressCount = tasksByStatus['in_progress']?.length ?? 0;
   const pendingCount = tasksByStatus['pending']?.length ?? 0;
   const blockedCount = tasksByStatus['blocked']?.length ?? 0;
   const orphanedCount = isStale ? inProgressCount + pendingCount : 0;
-  // If no visible tasks remain (all deleted), treat as 100% complete
-  const progress = total > 0 ? Math.round((completedCount / total) * 100) : 100;
+  // Progress based on full task list (not filtered)
+  const allCompleted = session.tasks.filter(t => t.status === 'completed').length;
+  const progress = total > 0 ? Math.round((allCompleted / total) * 100) : 100;
   const allTasksCleared = total === 0 && source === 'tasks';
   const timeAgo = formatTimeAgo(new Date(session.lastModified));
 
@@ -60,6 +71,11 @@ export default function SessionBoard({ session, isExpanded, onToggle }: SessionB
                 {sourceBadge.label}
               </span>
 
+              {searchQuery && (
+                <span className="text-xs text-amber-400 bg-amber-950/40 border border-amber-800/40 px-1.5 py-0.5 rounded-full">
+                  {matchCount} match{matchCount !== 1 ? 'es' : ''}
+                </span>
+              )}
               {allTasksCleared && !isStale && (
                 <span className="flex items-center gap-1 text-xs text-emerald-500/80 bg-emerald-950/30 border border-emerald-800/30 px-1.5 py-0.5 rounded-full">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
@@ -151,6 +167,7 @@ export default function SessionBoard({ session, isExpanded, onToggle }: SessionB
                   color={isStale ? 'text-slate-600' : col.color}
                   headerBg={isStale ? 'bg-slate-800/30' : col.headerBg}
                   isStale={isStale}
+                  searchQuery={searchQuery}
                 />
               ))}
             </div>
